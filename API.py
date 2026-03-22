@@ -38,30 +38,3 @@ def provider_summary():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
-
-
-
-# Testi
-"""from fastapi import FastAPI
-
-app = FastAPI()
-
-@app.get("/")
-def root():
-    return {"message": "API Works"}
-
-@app.get("/rides-per-day")
-def rides_per_day():
-    return [
-        {"date": "2024-01-01", "rides": 1000},
-        {"date": "2024-01-02",  "rides": 1200},
-    ]
-
-@app.get("/top-routes")
-def top_routes():
-    return {"data": "placeholder"}
-
-@app.get("/provider-summary")
-def provider_summary():
-    return {"data": "placeholder"}"""
