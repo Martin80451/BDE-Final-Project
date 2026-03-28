@@ -16,7 +16,7 @@ mc mb --ignore-existing minio/nyc-tlc-taxi-data
 
 echo "Uploading data..."
 
-mc cp /data/fhvhv_tripdata_2025-11.parquet minio/nyc-tlc-taxi-data
+mc cp /data/fhvhv_tripdata_2025-11.parquet minio/nyc-tlc-taxi-data/raw
 
 echo "MinIO setup complete!"
 
