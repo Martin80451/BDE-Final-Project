@@ -1,20 +1,28 @@
 from fastapi import FastAPI, HTTPException
 import pandas as pd
-import os
+import boto3
+import io
+import s3fs
 
 app = FastAPI()
 
-DATA_PATH = os.getenv("DATA_PATH", "./data/gold")
-
-def load_data(path: str): 
-    if not os.path.exists(path):
-        raise HTTPException(status_code=404, detail="File not found")
-    if not os.path.exists(DATA_PATH):
-        raise HTTPException(status_code=500, detail="Data directory missing")
+def load_parquet_from_s3(path: str):
     try:
-        return pd.read_parquet(path)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error reading data")
+        fs = s3fs.S3FileSystem(
+            key="user",
+            secret="user12345",
+            client_kwargs={"endpoint_url": "http://127.0.0.1:9000"}
+        
+        )
+
+        df = pd.read_parquet(
+            f"nyc-tlc-taxi-data/{path}",
+            filesystem=fs
+        )
+        return df
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 def root():
@@ -22,19 +30,20 @@ def root():
 
 @app.get("/rides-per-day")
 def rides_per_day():
-    df = load_data(f"{DATA_PATH}/rides_per_day.parquet")
+    df = load_parquet_from_s3("gold/rides_per_day.parquet")
     return df.to_dict(orient="records")
 
 @app.get("/top-routes")
-def top_routes():
-    df = load_data(f"{DATA_PATH}/top_routes.parquet")
-    return df.to_dict(orient="records")
+def top_routes(limit: int = 50):
+    df = load_parquet_from_s3("gold/top_routes.parquet")
+    return df.head(limit).to_dict(orient="records")
 
-@app.get("/provider-summary")
+"""@app.get("/provider-summary")
 def provider_summary():
-    df = load_data(f"{DATA_PATH}/provider_summary.parquet")
-    return df.to_dict(orient="records")
+    df = load_parquet_from_s3("gold/provider_summary.parquet")
+    return df.to_dict(orient="records")"""
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
