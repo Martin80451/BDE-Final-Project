@@ -6,27 +6,22 @@ df_cleaned = spark.read.parquet("s3a://nyc-tlc-taxi-data/silver/fhvhv_tripdata_2
 
 # Feature engineering
 
+df_engineered = df_cleaned
 df_cleaned_date_cols = df_cleaned.select("request_datetime", "on_scene_datetime", "pickup_datetime", "dropoff_datetime")
 for col in df_cleaned_date_cols.columns:
-    df_engineered = df_cleaned.withColumn(col, date_format(col, "MM-dd"))
+    df_engineered = df_engineered.withColumn(col, date_format(col, "MM-dd")).withColumnRenamed(col, col.replace("_datetime", "_date"))
 
 df_engineered = df_engineered.withColumn("route", concat_ws(" -> ", df_engineered["PULocationID"], df_engineered["DOLocationID"]))
 
+df_engineered.show()
+
 # Aggregations
 
-pickup_datetimes = df_cleaned.select("pickup_datetime")
-date_counts = []
-cols = ["pickup_date", "date_count"]
+agg1 = df_engineered.select("pickup_date").groupBy("pickup_date").count().orderBy("pickup_date")
+agg1.write.parquet("s3a://nyc-tlc-taxi-data/gold/rides_per_day.parquet", mode="overwrite")
 
-for i in range(30):
-    i += 1
-    if len(str(i)) == 1: i = "0" + str(i)
-    date = "11-" + str(i)
-    date_count = df_cleaned.filter(df_cleaned["pickup_datetime"].contains(date)).count()
-    date_counts.append((date, date_count))
+agg2 = df_engineered.select("route", "PULocationID", "DOLocationID").groupBy("route", "PULocationID", "DOLocationID").count().orderBy("count", ascending=False)
+agg2.write.parquet("s3a://nyc-tlc-taxi-data/gold/top_routes.parquet", mode="overwrite")
 
-df2 = spark.createDataFrame(date_counts, schema=cols)
-df2.write.parquet("s3a://nyc-tlc-taxi-data/gold/rides_per_day.parquet", mode="overwrite")
-
-df3 = df_cleaned.select("PULocationID", "DOLocationID").groupBy(["PULocationID", "DOLocationID"]).count().orderBy("count", ascending=False)
-df3.write.parquet("s3a://nyc-tlc-taxi-data/gold/top_routes.parquet", mode="overwrite")
+agg3 = df_engineered.filter((df_engineered["shared_request_flag"] == "N") & (df_engineered["shared_match_flag"] == "Y"))
+agg3.write.parquet("s3a://nyc-tlc-taxi-data/gold/shared_rides_where_req_was_N.parquet", mode="overwrite")
