@@ -11,7 +11,7 @@ def load_parquet_from_s3(path: str):
         fs = s3fs.S3FileSystem(
             key="user",
             secret="user12345",
-            client_kwargs={"endpoint_url": "http://127.0.0.1:9000"}
+            client_kwargs={"endpoint_url": "http://localhost:9000"}
         
         )
 
@@ -38,10 +38,10 @@ def top_routes(limit: int = 50):
     df = load_parquet_from_s3("gold/top_routes.parquet")
     return df.head(limit).to_dict(orient="records")
 
-"""@app.get("/provider-summary")
-def provider_summary():
-    df = load_parquet_from_s3("gold/provider_summary.parquet")
-    return df.to_dict(orient="records")"""
+@app.get("/Shared-Rides")
+def shared_rides():
+    df = load_parquet_from_s3("gold/shared_rides_where_req_was_N.parquet")
+    return df.to_dict(orient="records")
 
 @app.get("/health")
 def health():
